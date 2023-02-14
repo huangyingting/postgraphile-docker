@@ -1,0 +1,39 @@
+version: "3.3"
+services:
+  db:
+    container_name: db
+    restart: always
+    image: postgres:11.0-alpine
+    build:
+      context: ./db
+    volumes:
+      - ${PWD}/db/00-database.sql:/docker-entrypoint-initdb.d/00-database.sql
+      - ${PWD}/db/01-data.sql:/docker-entrypoint-initdb.d/01-data.sql
+    env_file:
+      - ./.env
+    networks:
+      - network
+    ports:
+      - 5432:5432
+
+  postgraphile:
+    container_name: postgraphile
+    restart: always
+    image: postgraphile
+    build:
+      context: ./postgraphile
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+    networks:
+      - network
+    ports:
+      - 5433:5433
+    command: ["--connection", "${DATABASE_URL}", "--port", "5433", "--schema", "forum", "--append-plugins", "postgraphile-plugin-connection-filter", "--enhance-graphiql", "--subscriptions", "--retry-on-init-fail", "--dynamic-json", "--no-setof-functions-contain-nulls", "--no-ignore-rbac", "--extended-errors", "hint,detail,errcode"]
+
+networks:
+  network:
+
+volumes:
+  db:
